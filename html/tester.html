@@ -1,0 +1,31 @@
+<html>
+<head>
+<title>tester</title>
+<script type="text/javascript" src="../js/framework/AnimationFramework.js"></script>
+<script type="text/javascript" src="../js/structures/Stack.js"></script>
+<script type="text/javascript" src="../js/structures/Queue.js"></script>
+<script type="text/javascript" src="../js/structures/TestNode.js"></script>
+<script type="text/javascript" src="../js/structures/graph/Graph.js"></script>
+<script type="text/javascript" src="../js/structures/graph/Vertex.js"></script>
+<script type="text/javascript" src="../js/structures/LinkedList.js"></script>
+<script type="text/javascript">
+var myGraph = new Graph();
+
+// Why does this add a Node?  It should NOT.
+// My guess is I create the adjacency list, and then forget to revise only the others
+// and end up handling what was just created.
+myGraph.addVertex(new Vertex('test1'));
+myGraph.addVertex(new Vertex('test2'));
+myGraph.addVertex(new Vertex('test3'));
+myGraph.addVertex(new Vertex('test4'));
+
+myGraph.connectVertices(new Vertex('test1'), new Vertex('test3'));
+myGraph.connectVertices(new Vertex('test2'), new Vertex('test3'));
+myGraph.connectVertices(new Vertex('test3'), new Vertex('test1'));
+
+alert('Graph:\n'+myGraph); 
+</script>
+</head>
+<body>
+</body>
+</html>

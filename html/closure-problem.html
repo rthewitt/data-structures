@@ -1,0 +1,40 @@
+<html>
+<head>
+<title>testRoot</title>
+<script type="text/javascript">
+/* This is a simplification to help with mmy closure problem.
+Also contains a description of better namespacing
+*/
+var _AF = (function(alias) {
+
+   var inside = "Hello"
+
+   function privateFun() {
+      return inside;
+   }
+
+   function showPrivate() {
+      alert(privateFun());
+   }
+
+   return {
+  
+      publicFun : showPrivate
+
+   }
+
+})()
+
+function doTest() {
+   var LOOK = _AF;
+
+   debugger;
+   LOOK.publicFun();
+}
+
+</script>
+</head>
+
+<body onload="doTest();">
+</body>
+</html>

@@ -1,0 +1,249 @@
+<html>
+<head>
+<title>Towers of Hanoi</title>
+<style type="text/css">
+.lister li {list-style-type:none;margin-top:5px;margin-bottom:5px;}
+</style>
+<script type="text/javascript" src="../js/structures/Stack.js"></script>
+<script type="text/javascript" src="../js/structures/Queue.js"></script>
+<script type="text/javascript" src="../js/framework/AnimationFramework.js"></script>
+<script type="text/javascript" src="../js/framework/DrawFunctions.js"></script>
+<script type="text/javascript">
+
+var stackOneId = 'STACK-ONE';
+var stackTwoId = 'STACK-TWO';
+var stackThreeId = 'STACK-THREE';
+var stackOne; 
+var stackTwo; 
+var stackThree; 
+var context
+var totalw
+var totalh;
+var dx=2;
+
+function init() {
+   cve = document.getElementById('canvas');
+   totalw = cve.width;
+   totalh = cve.height;
+   
+   var viewportW = window.innerWidth;
+   
+   cve.style.backgroundColor = "white";
+   cve.style.position = "fixed";
+   cve.style.backgroundImage = 'url("../images/canvas-bg.jpg")';
+   cve.style.left = ( viewportW - totalw ) / 2;
+   context = cve.getContext("2d");
+
+   _AF.setContext(context, totalw, totalh);
+   _Draw.setContext(context);
+   stackOne = getStackAnimator(stackOneId, 140);
+   stackTwo = getStackAnimator(stackTwoId, 300);
+   stackThree = getStackAnimator(stackThreeId, 400);
+   _AF.register(stackOne);
+   _AF.register(stackTwo);
+   _AF.register(stackThree);
+}
+
+function startAnim() {
+   _AF.schedule(10);
+   _AF.start();
+}
+
+function stopAnim() {
+   _AF.stop();
+}
+
+function getRandomColor() {
+   var r=getRand(255),g=getRand(255),b=getRand(255);
+   return [r,g,b];
+}
+
+function getRand(maxVal,floatVal) {
+   var randVal = Math.random()*maxVal;
+   return typeof floatVal=='undefined'?Math.round(randVal):randVal.toFixed(floatVal);
+}
+
+function randomRange(minVal,maxVal,floatVal) {
+  var randVal = minVal+(Math.random()*(maxVal-minVal));
+  return typeof floatVal=='undefined'?Math.round(randVal):randVal.toFixed(floatVal);
+}
+
+function whichStack(num) {
+   switch(num) {
+      case 1:
+      return stackOne;
+      break;
+      case 2:
+      return stackTwo;
+      break;
+      case 3:
+      return stackThree;
+      break;
+   }
+}
+
+function addNode(num) {
+   if(typeof num == 'undefined' || num === null) return;
+
+   var stan = whichStack(num);
+
+      if(stan.state != 'ready' && stan.state != 'connecting') return;
+      stan.setState('pushing');
+      var nodeH = randomRange(10,45);
+      stan.push(createNode(10, stan.getEffectiveHeight()-100,
+      30,
+      nodeH
+      ));
+}
+
+function sendAdrift(num) {
+   if(typeof num == 'undefined' || num === null) return;
+
+   var stan = whichStack(num);
+
+   if(stan.isEmpty() || stan.state != 'ready') return;
+   var popper = stan.pop();
+}
+
+
+function createNode(x, y, w, h) {
+   var lx=x, ly=y, lh=h, lw=w; // setting local for no reason except scope certainty.  Remove for performance ?
+   var i=0,j=0;
+   // you could further hide state by returning function which returns object
+   return {
+      coords : [ lx, ly ],
+      velocity : [i, j],
+      color: getRandomColor(),
+      state: '', 
+      dimensions : [ lw, lh ],
+      // all sub structures will need a draw function
+      draw : function() {
+               _Draw.drawNode(this.coords[0], this.coords[1], lw, lh, this.color, this.state); 
+        },
+      update : function() {
+               this.coords[0]+=this.velocity[0];
+               this.coords[1]+=this.velocity[1];
+      },
+      setState: function(state) {
+         if(state) this.state = state;
+         else this.state = null;
+      },
+      getState: function() {
+         return this.state;
+      }
+   }
+}
+
+function getStackAnimator(stanId, locX) {
+
+   var stan = _AF.createAnimator( stanId, new Stack() );
+
+   stan.BOTTOM = totalh;// TODO set
+   stan.CONNECTOR_HEIGHT = 2; 
+
+   // this will change as gaps are closed.
+   // use a flag isConnected, or something.
+   stan.getEffectiveHeight = function(){
+      var h = this.BOTTOM;
+      for(var n=0; n<this.pile.length; n++) {
+         h-= (this.pile[n].dimensions[1]+this.CONNECTOR_HEIGHT);
+      }
+      return (h < this.BOTTOM ? h : this.BOTTOM);
+   };
+
+   stan.locX = locX;
+
+   //TODO pass array into Animator specifying allowed or restricted functions.
+
+   stan.addAnimation('pop',
+   [  function(popped) {
+         popped.setState('breaking');  
+         var self = this;
+         setTimeout(function(){self.transition.call(self);}, 500);
+         this.transition();
+      }, // I dont't think this node is ever updated, since removing it from animator
+      function(popped){popped.draw();popped.update();}, //waiting for timeout TODO clean this as it will be common
+      function(popped) {
+         popped.setState(''); // TODO changed
+         this.transition();
+      },
+      function(popped){
+         popped.draw();popped.update(); //TODO understand this.
+         if(popped.velocity[1]==0) popped.velocity[1] = -3;
+         if(popped.coords[1] < stan.getEffectiveHeight()-40) this.transition();
+      },
+      function(popped){
+         if(popped.velocity[1] < -1 && popped.coords[1] < stan.getEffectiveHeight()-70) popped.velocity[1]++;
+         if(popped.velocity[0]==0 || popped.velocity[0] < 4) popped.velocity[0]++;
+         popped.draw();popped.update();
+         if(popped.coords[0] > 500) {
+            popped.velocity[0] = 0;
+            popped.velocity[1] = 0;
+            this.transition();
+      }
+   }], function() { return stan.getTop(); } );
+
+   stan.addAnimation('push',
+   [function(pushed){
+      pushed.setState('entering');
+      pushed.velocity[0] = 4;
+      this.transition(); 
+   },
+   function(pushed) {
+      if(pushed.coords[0] >= stan.locX) {
+         pushed.velocity = [0,2]
+         pushed.coords[0] = stan.locX;
+         this.transition();
+      }
+   },
+   function(pushed) {
+      if(pushed.getState() == 'entering' && 
+         pushed.coords[1] >= stan.getEffectiveHeight()) {
+            pushed.velocity = [0,0];
+            pushed.coords = [stan.locX, stan.getEffectiveHeight()];
+            pushed.setState('connecting');
+            stan.setState('connecting');
+            var self = this;
+            setTimeout(function(){self.transition.call(self);}, 500);
+      }
+   },
+   function(pushed) {
+      pushed.setState('connected');
+      stan.setState('ready');
+      this.transition();
+   }]);
+
+   
+   stan.init(); // maybe auto invoke this?
+
+   return stan;
+}
+
+</script>
+</head>
+
+<body onload="init()" style='background-image:url("../images/carpet.jpg");background-position: top left; background-repeat: repeat, round;'>
+<div style="position:absolute;width:100%; color: black;">
+<div style="width:100%; height:60px; text-align:center;"><h2>Towers of Hanoi</h2></div>
+<div style="width:500px; margin:0px auto; float:left; text-align:center;" width="340">
+<!--<div id="canvas-container" style="height:500px;">-->
+   <canvas id="canvas" width="900" height="500"></canvas>
+<!--</div>-->
+  <div id="ul-cont" style="text-align:left;">
+  <ul class="lister">
+  <li>
+  <input type="button" id="anim-button" onclick="startAnim();" value="Start!" /><br />
+  <input type="button" id="extra-1" onclick="sendAdrift(1);" value="POP! 1" />
+  <input type="button" id="extra-1" onclick="sendAdrift(2);" value="POP! 2" />
+  <input type="button" id="extra-1" onclick="sendAdrift(3);" value="POP! 3" /><br />
+  <input type="button" id="extra-1" onclick="addNode(1);" value="Push 1" />
+  <input type="button" id="extra-1" onclick="addNode(2);" value="Push 2" />
+  <input type="button" id="extra-1" onclick="addNode(3);" value="Push 3" /><br />
+  <input type="button" id="cl-button" onclick="_AF.pause();" value="Pause" />
+  <input type="button" id="cl-button" onclick="_AF.stop();init();" value="Stop" /><br />
+  </li></ul>
+  </div>
+</div>
+</div>
+</body>
+</html>
